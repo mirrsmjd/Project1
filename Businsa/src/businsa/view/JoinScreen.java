@@ -6,8 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.regex.Pattern;
 
 import javax.swing.JButton;
@@ -15,7 +13,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
@@ -24,8 +21,10 @@ import businsa.model.MemberVO;
 
 
 //회원가입
-public class JoinScreen extends JFrame {
+public class JoinScreen extends JFrame implements ActionListener, KeyListener {
 
+	private static final long serialVersionUID = 1L;
+	
 	// 필드
 	private JPanel         contentPane;
 	private JTextField     userid;
@@ -180,7 +179,17 @@ public class JoinScreen extends JFrame {
 		panel.add(btnJoinButton);
 		
 		//-------------------------------------------------------------------
-		// 기능구현
+		// 버튼 기능
+		btnCheckButton.addActionListener(this);
+		btnJoinButton.addActionListener(this);
+		// 키보드 엔트 기능
+		passwd.addKeyListener(this);
+		pwdRe.addKeyListener(this);
+		username.addKeyListener(this);
+		phone.addKeyListener(this);
+		addr.addKeyListener(this);
+		email.addKeyListener(this);
+		/* 기능구현
 		// 중복버튼 기능
 		btnCheckButton.addActionListener(new ActionListener() {
 			MemberDao mDao = new MemberDao();
@@ -314,14 +323,142 @@ public class JoinScreen extends JFrame {
 				}
 				
 			}
-		});
+		}); */
 		//---------------------------------------------------------------------
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setSize(480, 650);
 		setLocation(700, 200);
 		setVisible(true);
 	}
-
+	
+	// 버튼 기능 구현
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		MemberDao mDao     = new MemberDao();
+		String    inuserid = userid.getText();
+		switch(e.getActionCommand()) {
+		case "아이디중복확인":
+			if(inuserid.equals("")) {
+				JOptionPane.showMessageDialog(null, "아이디를 적어주세요");
+				userid.setText("");
+			} else {
+				if(!checkId(inuserid)) {    // 아이디 유효성 검사
+					JOptionPane.showMessageDialog(null, "영문,한글,숫자 2~15자리 기입하세요");
+					userid.setText("");
+				} else {	
+					if(mDao.findExistId(inuserid)){
+						JOptionPane.showMessageDialog(null, "사용중인 아이디 입니다");
+						userid.setText("");
+						return;
+					} else {
+						JOptionPane.showMessageDialog(null, "사용가능한 아이디 입니다.");
+						passwd.grabFocus();
+					}
+				}
+			}
+			break;
+		case "가입 완료": // 가입 버튼시 모든 내용 재검사
+			if(inuserid.equals("")) {
+				JOptionPane.showMessageDialog(null, "아이디를 적어주세요");
+				userid.setText("");
+			} else if(!inuserid.equals("")) {               // 아이디 검사
+				if(!checkId(inuserid)) {                     
+					JOptionPane.showMessageDialog(null, "영문,한글,숫자 2~15자리 기입하세요");
+					userid.setText("");
+				} else if(mDao.findExistId(inuserid)) {
+					JOptionPane.showMessageDialog(null, "사용중인 아이디 입니다");
+					userid.setText("");
+				} else if(passwd.getText().equals("")) {         
+					JOptionPane.showMessageDialog(null,	"패스워드를 기입하세요");
+				} else if(!checkPasswd(passwd.getText())) {      // 패스워드 검사
+					JOptionPane.showMessageDialog(null,
+							"영문,숫자,특수문자(!@#$%^&*) 최소 1개 포함 8~20자 기입하세요");
+					passwd.setText("");
+					passwd.grabFocus();
+				} else if(pwdRe.getText().equals("")) {         
+					JOptionPane.showMessageDialog(null,	"패스워드 재확인을 기입하세요");
+				} else if(!passwd.getText().equals(pwdRe.getText())) {  // 패스워드 재확인
+					JOptionPane.showMessageDialog(null,	"비밀번호가 일치하지 않습니다");
+					pwdRe.setText("");
+					pwdRe.grabFocus();
+				} else if(username.getText().equals("")) {       
+					JOptionPane.showMessageDialog(null,	"이름을 기입하세요");
+				} else if(phone.getText().equals("")) {       
+					JOptionPane.showMessageDialog(null,	"핸드폰번호를 기입하세요");
+				} else if(!phone.getText().equals("")) {          // 핸드폰 검사
+					if(!checkPhone(phone.getText())) {
+						JOptionPane.showMessageDialog(null,
+								"올바른 핸드폰번호가 아닙니다. 다시 입력해주세요");
+						phone.setText("");
+						phone.grabFocus();
+					} else if(addr.getText().equals("")) {
+						JOptionPane.showMessageDialog(null,	"주소를 기입하세요");
+					} else if(email.getText().equals("")) {           
+						JOptionPane.showMessageDialog(null,	"이메일을 기입하세요");
+					} else if(!email.getText().equals("")) {           // 이메일 검사
+						if(!checkEmail(email.getText())) {
+							JOptionPane.showMessageDialog(null,
+									"올바른 이메일이 아닙니다. 다시 입력해주세요");
+							email.setText("");
+							email.grabFocus();
+						} else {
+							joinMember();
+						}	
+					}
+				}
+			}
+		}
+	}
+	
+	// 키보드 기능 구현
+	@Override
+	public void keyTyped(KeyEvent e) { }
+	@Override
+	public void keyPressed(KeyEvent e) {
+		if(e.getKeyCode() == KeyEvent.VK_ENTER) {
+			Object ob = e.getSource();
+			if(ob == passwd) {          // 패스워드 유효성 검사
+				if(!checkPasswd(passwd.getText())) {
+					JOptionPane.showMessageDialog(null,
+							"영문,숫자,특수문자(!@#$%^&*) 최소 1개 포함 8~20자 기입하세요");
+					passwd.setText("");
+				} else {
+					pwdRe.grabFocus();
+				}
+			} else if(ob == pwdRe) {   // 패스워드 재확인
+				if(passwd.getText().equals(pwdRe.getText())) {
+					username.grabFocus();
+				} else {
+					JOptionPane.showMessageDialog(null,
+							"비밀번호가 일치하지 않습니다");
+					pwdRe.setText("");
+					pwdRe.grabFocus();
+				} 
+			} else if(ob == username) { // 핸드폰으로 이동
+				phone.grabFocus();
+			} else if(ob == phone) {    // 핸드폰 유효성 검사
+				if(!checkPhone(phone.getText())) {
+					JOptionPane.showMessageDialog(null,
+							"올바른 핸드폰번호가 아닙니다. 다시 입력해주세요");
+					phone.setText("");
+				} else {
+					addr.grabFocus();
+				}
+			} else if(ob == addr) {     // 이메일로 이동
+				email.grabFocus(); 
+			} else if(ob == email) {    // 이메일 유효성 검사
+				if(!checkEmail(email.getText())) {
+					JOptionPane.showMessageDialog(null,
+							"올바른 이메일이 아닙니다. 다시 입력해주세요");
+					email.setText("");
+				}
+			}
+		}
+	}
+	@Override
+	public void keyReleased(KeyEvent e) { }
+	
+	
 	// 유효성 검사
 	protected boolean checkId(String userid) {
 		return Pattern.matches("^[a-zA-Z0-9가-힣]{2,15}$", userid);
